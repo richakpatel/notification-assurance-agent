@@ -1,0 +1,85 @@
+########################################################################
+Customer Notification Assurance Agent -- faithful anonymized demo
+Detector (eligible vs stamped) + observability-gap closer
+########################################################################
+
+========================================================================
+MAS  Monthly Statement  |  period=2024-10
+========================================================================
+  REASON: run MAS assurance for 2024-10
+  ACT reconcile -> eligible=3 stamped=2 missed=1
+  ACT detect_gaps -> 1 observability gap(s)
+      retrieve('eligible not stamped missed', MAS) -> runbook_mas.md#eligible_not_stamped score=0.342
+        grounded -> reason=eligible_not_stamped category=needs_review missed=True escalate=True
+      retrieve('stamped_but_bounced', MAS) -> reason_code_glossary.md#stamped_but_bounced score=0.232
+        grounded -> reason=stamped_but_bounced category=needs_review missed=True escalate=True
+  REASON: missed=2 escalations=2
+
+  Findings:
+    C002   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=high   conf=0.342
+    C004   observed=stamped_but_bounced        reason=stamped_but_bounced    missed=True  escalate=True  sev=high   conf=0.232
+
+  -> missed=2  escalations=2
+
+========================================================================
+MCN  Multiplier Notice  |  period=2024-10
+========================================================================
+  REASON: run MCN assurance for 2024-10
+  ACT reconcile -> eligible=3 stamped=2 missed=1
+  ACT detect_gaps -> 0 observability gap(s)
+      retrieve('eligible not stamped missed', MCN) -> runbook_mcn.md#eligible_not_stamped score=0.375
+        grounded -> reason=eligible_not_stamped category=needs_review missed=True escalate=True
+  REASON: missed=1 escalations=1
+
+  Findings:
+    M002   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=high   conf=0.375
+
+  -> missed=1  escalations=1
+
+========================================================================
+THRESHOLD  Usage  |  period=2024-10-05
+========================================================================
+  REASON: run THRESHOLD assurance for 2024-10-05
+  ACT reconcile -> eligible=3 stamped=1 missed=2
+  ACT detect_gaps -> 1 observability gap(s)
+      retrieve('threshold_silent_failure', THRESHOLD) -> reason_code_glossary.md#threshold_silent_failure score=0.331
+        grounded -> reason=threshold_silent_failure category=needs_review missed=True escalate=True
+      retrieve('eligible not stamped missed', THRESHOLD) -> reason_code_glossary.md#eligible_not_stamped score=0.219
+        grounded -> reason=eligible_not_stamped category=real_failure missed=True escalate=True
+  REASON: missed=2 escalations=2
+
+  Findings:
+    T002   observed=threshold_silent_failure   reason=threshold_silent_failure missed=True  escalate=True  sev=high   conf=0.331
+    T003   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=medium conf=0.219
+
+  -> missed=2  escalations=2
+
+########################################################################
+WHY THE GROUNDED AGENT BEATS A PROMPT-ONLY / RAW-FIELD RECONCILIATION
+########################################################################
+
+  A naive reconciliation over the raw fields (what a prompt-only approach sees)
+  gets these SPECIFIC records wrong -- the grounded agent gets them right:
+
+    C003 (MAS)  suppressed account.
+       naive: counts as MISSED (false positive escalation).
+       agent: excluded as expected compliant non-send.        [suppression rule]
+
+    C004 (MAS)  stamped as sent, but the email BOUNCED.
+       naive: counts as DELIVERED (false negative -- customer never reached).
+       agent: high-severity 'stamped_but_bounced' via external probe.
+              INVISIBLE to the source system: the stamp is the only proof-of-send.
+
+    M003 (MCN)  stamped 47 days ago, inside the ~80-day throttle window.
+       naive: with only a 'stamped this month?' check it looks MISSED.
+       agent: excluded -- within throttle, legitimately not re-sent. [throttle]
+
+    T002 (THRESHOLD)  usage crossed 80%, email delivered, but tier NOT stamped.
+       naive: counts as a routine miss (or misses it entirely).
+       agent: high-severity 'threshold_silent_failure' -- the threshold job only
+              debug-logs stamp-update failures, so this proof-of-send loss is
+              otherwise undetectable.
+
+  Net: same rough 'missed' counts, but the grounded agent removes false positives
+  (suppression, throttle) AND surfaces high-severity failures the stamp-only source
+  system cannot see (bounces, silent stamp-update failures). That is the value.
