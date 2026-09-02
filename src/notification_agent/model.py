@@ -40,8 +40,8 @@ class Record:
     start_before_last_month: bool = True         # started on/before last month
 
     # Subscription / recipient signals
-    subscribed_statement: bool = False           # 'Monthly Usage' + MUN-* recipient
-    subscribed_multiplier: bool = False          # MCN-* recipient
+    subscribed_statement: bool = False           # subscribed to monthly statements + a valid recipient type
+    subscribed_multiplier: bool = False          # subscribed to multiplier-change notices
     subscribed_thresholds: list[int] = field(default_factory=list)  # e.g. [80, 90, 100]
 
     # Suppression flag

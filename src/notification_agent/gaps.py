@@ -9,7 +9,7 @@ because there is no delivery-log object and one process swallows its errors:
       Invisible to the source system (stamp == only proof-of-send).
 
   G2 "threshold_silent_failure": for THRESHOLD, the stamp update is only
-      System.debug'd on failure -- no gack, no error log. So the usage crossed a
+      logged at debug level on failure -- no system error alert, no error log. So the usage crossed a
       tier and an email likely went out, yet the tier is missing from the stamp
       list. Looks "missed" but is really a lost proof-of-send.
 

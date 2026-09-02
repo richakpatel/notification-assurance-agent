@@ -20,7 +20,7 @@ re-run if needed.
 notification_type: THRESHOLD
 reason_code: threshold_silent_failure
 The threshold process only writes a debug line if its sent-list update fails -- it
-does not raise a gack email or an error-log record. So an email can go out while the
+does not raise a system error alert or an error-log record. So an email can go out while the
 tier is never recorded, or the update can fail invisibly. If the external provider
 shows a delivery but the tier is missing from the sent list, classify this as a
 high-severity silent failure and route for human review; it indicates lost

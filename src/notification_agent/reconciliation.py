@@ -11,7 +11,7 @@ proof-of-send -- so a record that is eligible but NOT stamped after the run wind
 is a missed notification. This exactness (set logic over structured records) is why
 this half does not use semantic retrieval.
 
-Eligibility predicates below are anonymized restatements of the real SOQL:
+Eligibility predicates below are anonymized restatements of the real query logic:
   - MAS:       active/ended<=45d, subscribed to statements, started <= last month,
                not suppressed for MAS, and NOT already stamped THIS cycle (month).
   - MCN:       active, subscribed to multiplier, a multiplier is effective soon,
@@ -86,7 +86,7 @@ def _eligible_mcn(r: Record) -> bool:
 
 
 def _highest_crossed_tier(r: Record) -> int | None:
-    """Highest subscribed tier the usage has crossed (mirrors real in-Apex pick)."""
+    """Highest subscribed tier the usage has crossed (mirrors the real selection logic)."""
     crossed = [t for t in sorted(r.subscribed_thresholds)
                if t in THRESHOLD_TIERS and r.usage_percentage >= t]
     return crossed[-1] if crossed else None
