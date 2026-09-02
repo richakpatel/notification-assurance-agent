@@ -1,0 +1,81 @@
+{
+  "note": "SYNTHETIC / ANONYMIZED sample data — fabricated for the capstone demo. No real customer, contract, or company data.",
+  "environment": "demo",
+  "eligible_record_types": ["PlatformCore", "MessagingSuite"],
+  "scheduler": {
+    "endpoint": "https://scheduler.internal.example.com/schedules",
+    "regions": [
+      {"flow": "statement-notify-amer",   "status": "COMPLETED", "note": "first run ABORTED (job-2026-08-amer-aborted-0001), rerun COMPLETED (job-2026-08-amer-rerun-0002)"},
+      {"flow": "statement-notify-emea",   "status": "COMPLETED"},
+      {"flow": "statement-notify-apac",   "status": "COMPLETED"},
+      {"flow": "statement-notify-japan",  "status": "COMPLETED"},
+      {"flow": "statement-notify-canada", "status": "COMPLETED"},
+      {"flow": "statement-notify-latam",  "status": "COMPLETED"}
+    ]
+  },
+  "periods": [
+    {
+      "statement_period": "2026-06",
+      "delivery_period": "2026-07-10 to 2026-07-11",
+      "status": "Completed",
+      "snapshot_date": "2026-07-12",
+      "baseline": { "eligible_contracts": 12900, "eligible_entitlements": 38600 },
+      "actual": {
+        "notified_contracts": 12610,
+        "notified_entitlements": 37980,
+        "missing_contracts": 290,
+        "missing_entitlements": 620
+      },
+      "delivery_rate": 0.9839,
+      "tiers": [
+        { "tier": "Direct Customers", "eligible": 38100, "notified": 37540, "missing": 560 },
+        { "tier": "Reseller",         "eligible": 380,   "notified": 330,   "missing": 50 },
+        { "tier": "OEM",              "eligible": 120,   "notified": 110,   "missing": 10 }
+      ],
+      "regions": [
+        { "region": "AMER",   "eligible_contracts": 5200, "notified_contracts": 5080, "missing_contracts": 120 },
+        { "region": "EMEA",   "eligible_contracts": 3300, "notified_contracts": 3230, "missing_contracts": 70 },
+        { "region": "APAC",   "eligible_contracts": 1900, "notified_contracts": 1860, "missing_contracts": 40 },
+        { "region": "JAPAN",  "eligible_contracts": 900,  "notified_contracts": 885,  "missing_contracts": 15 },
+        { "region": "CANADA", "eligible_contracts": 800,  "notified_contracts": 785,  "missing_contracts": 15 },
+        { "region": "LATAM",  "eligible_contracts": 800,  "notified_contracts": 770,  "missing_contracts": 30 }
+      ]
+    },
+    {
+      "statement_period": "2026-07",
+      "delivery_period": "2026-08-10 to 2026-08-11 (scheduled)",
+      "status": "Awaiting notification run",
+      "snapshot_date": "2026-08-08",
+      "baseline": { "eligible_contracts": 12480, "eligible_entitlements": 39200 },
+      "actual": {
+        "notified_contracts": 0,
+        "notified_entitlements": 0,
+        "missing_contracts": 12480,
+        "missing_entitlements": 39200
+      },
+      "delivery_rate": 0.0,
+      "tiers": [
+        { "tier": "Direct Customers", "eligible": 38700, "notified": 0, "missing": 38700 },
+        { "tier": "Reseller",         "eligible": 380,   "notified": 0, "missing": 380 },
+        { "tier": "OEM",              "eligible": 120,   "notified": 0, "missing": 120 }
+      ],
+      "regions": [
+        { "region": "AMER",   "eligible_contracts": 5050, "notified_contracts": 0, "missing_contracts": 5050 },
+        { "region": "EMEA",   "eligible_contracts": 3200, "notified_contracts": 0, "missing_contracts": 3200 },
+        { "region": "APAC",   "eligible_contracts": 1830, "notified_contracts": 0, "missing_contracts": 1830 },
+        { "region": "JAPAN",  "eligible_contracts": 870,  "notified_contracts": 0, "missing_contracts": 870 },
+        { "region": "CANADA", "eligible_contracts": 760,  "notified_contracts": 0, "missing_contracts": 760 },
+        { "region": "LATAM",  "eligible_contracts": 770,  "notified_contracts": 0, "missing_contracts": 770 }
+      ],
+      "usage_type_concentration": [
+        { "usage_type": "Storage Units",   "eligible_entitlements": 8600 },
+        { "usage_type": "Service Credits", "eligible_entitlements": 7900 },
+        { "usage_type": "Compute Requests","eligible_entitlements": 5700 },
+        { "usage_type": "Flex Units",      "eligible_entitlements": 5000 },
+        { "usage_type": "Bulk Messages",   "eligible_entitlements": 1600 },
+        { "usage_type": "Chat Sessions",   "eligible_entitlements": 1450 },
+        { "usage_type": "Mobile Messages", "eligible_entitlements": 1380 }
+      ]
+    }
+  ]
+}

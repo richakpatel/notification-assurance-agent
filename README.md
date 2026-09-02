@@ -67,7 +67,9 @@ notification-assurance-agent/
 │   ├── __init__.py
 │   └── server.py                 #   GET /health · GET /demo · POST /reconcile
 ├── data/
-│   └── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
+│   ├── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
+│   ├── scenarios/                # synthetic worked examples (MAS gap investigation + monitoring notes)
+│   └── sample_reports/           # synthetic statement-period report the monitoring dashboard renders
 ├── scripts/
 │   └── run_demo.py               # zero-install entry point (runs the console demo)
 ├── tests/
@@ -101,8 +103,20 @@ python3 -m notification_agent
 
 ```bash
 python3 api/server.py            # serves on http://127.0.0.1:8000
+```
+
+Then open a browser to:
+
+- **http://127.0.0.1:8000/** — live agent-findings dashboard (all three processes)
+- **http://127.0.0.1:8000/monitoring** — synthetic MAS statement-period monitor
+  (bank-statement-style view: eligible vs. notified vs. missing, by tier and region)
+
+Or hit the JSON endpoints directly:
+
+```bash
 curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8000/demo  # runs all three processes on the sample data
+curl http://127.0.0.1:8000/demo            # all three processes on the sample data
+curl http://127.0.0.1:8000/monitoring.json # the statement-period report
 # POST your own synthetic records:
 curl -X POST http://127.0.0.1:8000/reconcile \
   -d '{"notification_type":"MAS","period":"2026-10","cycle_start":"2026-10-01",

@@ -56,6 +56,17 @@ from notification_agent import (  # noqa: E402
 
 _VALID_TYPES = {MAS, MCN, THRESHOLD}
 
+# Synthetic statement-period monitoring report rendered by the /monitoring dashboard.
+_REPORT_PATH = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "data" / "sample_reports" / "statement_periods.json"
+)
+
+
+def _load_statement_report() -> dict:
+    with open(_REPORT_PATH, encoding="utf-8") as fh:
+        return json.load(fh)
+
 
 # --------------------------------------------------------------------------- #
 # Serialization helpers
@@ -180,12 +191,146 @@ def _render_index_html(cycles: dict) -> str:
     <span class="synthetic">ALL DATA SYNTHETIC / ANONYMIZED</span>
   </header>
   <main>
-    <p class="endpoints">API endpoints:
-      <code>GET /health</code> &nbsp; <code>GET /demo</code> (raw JSON) &nbsp;
-      <code>POST /reconcile</code> &nbsp; | &nbsp; this page = <code>GET /</code></p>
+    <p class="endpoints">Pages: <a href="/">agent findings</a> &middot;
+      <a href="/monitoring">MAS statement-period monitor</a> &nbsp; | &nbsp;
+      API: <code>GET /health</code> &nbsp; <code>GET /demo</code> &nbsp;
+      <code>POST /reconcile</code></p>
     {''.join(sections)}
   </main>
   <footer>Notification Assurance Agent v{__version__} &middot; zero-dependency stdlib server</footer>
+</body></html>"""
+
+
+def _render_monitoring_html(report: dict) -> str:
+    """Render the synthetic statement-period monitoring dashboard."""
+    periods = report.get("periods", [])
+    latest = periods[-1] if periods else {}
+    lb = latest.get("baseline", {})
+    la = latest.get("actual", {})
+    rate = latest.get("delivery_rate", 0.0)
+    status = latest.get("status", "—")
+    status_color = "#0E9F8E" if status == "Completed" else "#E0A800"
+
+    # Statement-period summary table
+    period_rows = []
+    for p in periods:
+        b, a = p.get("baseline", {}), p.get("actual", {})
+        dr = p.get("delivery_rate", 0.0)
+        period_rows.append(
+            f"<tr>"
+            f"<td class='mono'>{_esc(p.get('statement_period'))}</td>"
+            f"<td class='mono'>{_esc(p.get('delivery_period'))}</td>"
+            f"<td>{b.get('eligible_contracts', 0):,} / {b.get('eligible_entitlements', 0):,}</td>"
+            f"<td>{a.get('notified_contracts', 0):,} / {a.get('notified_entitlements', 0):,}</td>"
+            f"<td>{a.get('missing_contracts', 0):,} / {a.get('missing_entitlements', 0):,}</td>"
+            f"<td style='text-align:right'>{dr * 100:.1f}%</td>"
+            f"<td>{_esc(p.get('status'))}</td>"
+            f"</tr>"
+        )
+
+    # Per-period tier + region detail for the latest period
+    def _kv_table(title, rows_html, cols):
+        return (f"<div class='block'><h3>{_esc(title)}</h3><table><thead><tr>"
+                + "".join(f"<th>{_esc(c)}</th>" for c in cols)
+                + f"</tr></thead><tbody>{rows_html}</tbody></table></div>")
+
+    tier_rows = "".join(
+        f"<tr><td>{_esc(t['tier'])}</td><td style='text-align:right'>{t['eligible']:,}</td>"
+        f"<td style='text-align:right'>{t['notified']:,}</td>"
+        f"<td style='text-align:right'>{t['missing']:,}</td></tr>"
+        for t in latest.get("tiers", [])
+    )
+    region_rows = "".join(
+        f"<tr><td>{_esc(r['region'])}</td><td style='text-align:right'>{r['eligible_contracts']:,}</td>"
+        f"<td style='text-align:right'>{r['notified_contracts']:,}</td>"
+        f"<td style='text-align:right'>{r['missing_contracts']:,}</td></tr>"
+        for r in latest.get("regions", [])
+    )
+    sched_rows = "".join(
+        f"<tr><td class='mono'>{_esc(s['flow'])}</td>"
+        f"<td><span class='pill' style='background:{'#0E9F8E' if s['status'] == 'COMPLETED' else '#D94A4A'}'>{_esc(s['status'])}</span></td>"
+        f"<td class='mono' style='font-size:11px;color:#888'>{_esc(s.get('note', ''))}</td></tr>"
+        for s in report.get("scheduler", {}).get("regions", [])
+    )
+
+    detail = _kv_table("By tier (entitlements) — latest period",
+                       tier_rows, ["tier", "eligible", "notified", "missing"])
+    detail += _kv_table("By region (contracts) — latest period",
+                        region_rows, ["region", "eligible", "notified", "missing"])
+    detail += _kv_table("Regional scheduler status",
+                        sched_rows, ["flow", "status", "note"])
+
+    ert = ", ".join(report.get("eligible_record_types", []))
+
+    return f"""<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAS Statement-Period Monitor</title>
+<style>
+  :root {{ --band:#1F2A4C; }}
+  * {{ box-sizing:border-box; }}
+  body {{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+          color:#1a1a2e; background:#f4f6fb; }}
+  header {{ background:var(--band); color:#fff; padding:28px 32px; }}
+  header h1 {{ margin:0 0 6px; font-size:22px; }}
+  header p {{ margin:0; opacity:.85; font-size:14px; }}
+  .synthetic {{ display:inline-block; margin-top:10px; padding:3px 10px; border-radius:12px;
+                background:#0E9F8E; color:#fff; font-size:12px; font-weight:600; }}
+  main {{ max-width:1040px; margin:0 auto; padding:24px 32px 48px; }}
+  .cards {{ display:flex; gap:14px; flex-wrap:wrap; margin:8px 0 20px; }}
+  .card {{ background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08);
+           padding:14px 18px; min-width:150px; flex:1; }}
+  .card .n {{ font-size:24px; font-weight:700; color:var(--band); }}
+  .card .l {{ font-size:12px; color:#777; text-transform:uppercase; letter-spacing:.04em; }}
+  .panel {{ background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08);
+            padding:18px 20px; margin:16px 0; }}
+  h2 {{ color:var(--band); font-size:17px; margin:0 0 12px; }}
+  h3 {{ color:var(--band); font-size:14px; margin:16px 0 8px; }}
+  table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+  th,td {{ padding:7px 9px; border-bottom:1px solid #eee; text-align:left; }}
+  th {{ background:#f0f2f8; color:var(--band); font-weight:600; }}
+  .mono {{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }}
+  .pill {{ color:#fff; padding:2px 9px; border-radius:10px; font-size:11px; font-weight:600; }}
+  .nav {{ font-size:13px; }} .nav a {{ color:#2B59C3; }}
+  footer {{ text-align:center; color:#999; font-size:12px; padding:20px; }}
+</style></head>
+<body>
+  <header>
+    <h1>MAS Statement-Period Monitor</h1>
+    <p>Bank-statement-style view: each row is a statement month, not a delivery month.</p>
+    <span class="synthetic">ALL DATA SYNTHETIC / ANONYMIZED</span>
+  </header>
+  <main>
+    <p class="nav"><a href="/">&larr; agent findings</a> &middot; environment:
+      <b>{_esc(report.get('environment', 'demo'))}</b> &middot; eligible record types:
+      <span class="mono">{_esc(ert)}</span></p>
+
+    <h2>Latest period: {_esc(latest.get('statement_period', '—'))}
+      &nbsp;<span class="pill" style="background:{status_color}">{_esc(status)}</span></h2>
+    <div class="cards">
+      <div class="card"><div class="n">{lb.get('eligible_contracts', 0):,}</div><div class="l">eligible contracts</div></div>
+      <div class="card"><div class="n">{lb.get('eligible_entitlements', 0):,}</div><div class="l">eligible entitlements</div></div>
+      <div class="card"><div class="n">{la.get('notified_entitlements', 0):,}</div><div class="l">notified entitlements</div></div>
+      <div class="card"><div class="n">{la.get('missing_entitlements', 0):,}</div><div class="l">missing entitlements</div></div>
+      <div class="card"><div class="n">{rate * 100:.1f}%</div><div class="l">delivery rate</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Statement periods</h2>
+      <table>
+        <thead><tr>
+          <th>statement</th><th>delivery</th><th>eligible (C / E)</th>
+          <th>notified (C / E)</th><th>missing (C / E)</th><th>rate</th><th>status</th>
+        </tr></thead>
+        <tbody>{''.join(period_rows)}</tbody>
+      </table>
+      <p style="font-size:12px;color:#888;margin-top:10px">C = unique contracts, E = entitlements.
+        Missing is computed against the <b>frozen</b> pre-job baseline.</p>
+    </div>
+
+    <div class="panel">{detail}</div>
+  </main>
+  <footer>Notification Assurance Agent v{__version__} &middot; synthetic monitoring demo</footer>
 </body></html>"""
 
 
@@ -252,6 +397,20 @@ def build_app(agent: NotificationAssuranceAgent | None = None):
                                  "cycles": self._run_demo_cycles()})
                 return
 
+            if self.path == "/monitoring":
+                try:
+                    self._send_html(_render_monitoring_html(_load_statement_report()))
+                except (OSError, ValueError) as exc:
+                    self._send_json({"error": f"could not load report: {exc}"}, status=500)
+                return
+
+            if self.path == "/monitoring.json":
+                try:
+                    self._send_json(_load_statement_report())
+                except (OSError, ValueError) as exc:
+                    self._send_json({"error": f"could not load report: {exc}"}, status=500)
+                return
+
             self._send_json({"error": "not found", "path": self.path}, status=404)
 
         def do_POST(self):  # noqa: N802
@@ -282,7 +441,8 @@ def run(host: str = "127.0.0.1", port: int = 8000) -> None:
     print(f"Notification Assurance Agent API  (v{__version__})")
     print(f"  serving on http://{host}:{port}   (Ctrl-C to stop)")
     print(f"  open http://{host}:{port}/  in a browser for the live dashboard")
-    print("  GET  /           GET  /health     GET  /demo     POST /reconcile")
+    print(f"  MAS statement-period monitor: http://{host}:{port}/monitoring")
+    print("  GET  /   /monitoring   /health   /demo   /monitoring.json   POST /reconcile")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
