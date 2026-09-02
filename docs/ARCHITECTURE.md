@@ -24,6 +24,7 @@ All core modules live in the `notification_agent` package under `src/`.
 | Confidence → human review | `src/notification_agent/agent.py` (`SIMILARITY_THRESHOLD` fallback) | Below threshold, the finding degrades to `needs_review` instead of forcing a match. |
 | ReAct orchestration | `src/notification_agent/agent.py` (`run_cycle`) | Reason → Act (reconcile) → Observe → Act (detect gaps) → Reason (classify) → Route, with a full trajectory trace. |
 | Synthetic sample data | `src/notification_agent/sample_data.py` (`build_records`) | The teaching-case records shared by the demo, the tests, and the API's `/demo` route. |
+| Labeled validation corpus | `src/notification_agent/synthetic_data.py` (`generate` → `generate_synthetic_corpus`) | Seeded, labeled 600-record corpus (200/process); each record paired with the ground-truth outcome. Population shape from anonymized aggregate ratios only. |
 | Console demo | `src/notification_agent/__main__.py` | Runs all three processes + the contrast test; invoked by `scripts/run_demo.py`, `python3 -m notification_agent`, or the `notification-agent-demo` command. |
 | HTTP JSON API | `api/server.py` | Zero-dependency `http.server` wrapper exposing the agent: `GET /health`, `GET /demo`, `POST /reconcile`. Read-only, like the agent itself. |
 
@@ -54,6 +55,19 @@ grounded agent vs. a naive raw-field reconciliation on the same synthetic record
 See `SAMPLE_OUTPUT.txt` for a captured run. `tests/test_reconciliation.py` asserts
 the deterministic counts, suppression handling, throttle logic, high-severity
 bounce escalation, and low-confidence routing.
+
+For a quantitative measure, `scripts/validate_agent.py` runs the agent over the
+labeled synthetic corpus (`synthetic_data.py`, 600 records) and scores it against
+ground truth with confusion matrices on two dimensions — *missed detection*
+(eligible-vs-stamped) and *gap detection* (bounces, silent stamp losses). It
+prints per-process and overall precision/recall and exits non-zero on any
+mismatch, so it doubles as a regression test (also wrapped in
+`tests/test_validation_corpus.py`). Current result: precision = recall = 1.000 on
+both dimensions across all 600 records, with zero false positives. Because the
+reconciliation core is deterministic and the gap probe is exact, this measures
+that the eligibility predicates, throttle/suppression guards, highest-tier logic,
+and gap classification are wired correctly end-to-end — not statistical accuracy
+of a model.
 
 ## Known limitation
 

@@ -23,6 +23,7 @@ from .gaps import ObservabilityGap, detect_gaps
 from .retrieval import KnowledgeBase, SIMILARITY_THRESHOLD, build_default_kb
 from .agent import CycleReport, Finding, NotificationAssuranceAgent
 from .sample_data import build_records
+from .synthetic_data import LabeledRecord, generate as generate_synthetic_corpus
 
 __version__ = "1.0.0"
 
@@ -49,5 +50,8 @@ __all__ = [
     "Finding",
     # sample data
     "build_records",
+    # synthetic validation corpus
+    "LabeledRecord",
+    "generate_synthetic_corpus",
     "__version__",
 ]

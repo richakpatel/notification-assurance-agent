@@ -62,7 +62,8 @@ notification-assurance-agent/
 │       ├── reconciliation.py     #   deterministic per-process eligible-vs-stamped logic (no RAG)
 │       ├── gaps.py               #   observability-gap detection via a simulated delivery probe
 │       ├── retrieval.py          #   dependency-free semantic retrieval (top-k, threshold, metadata filter)
-│       └── sample_data.py        #   synthetic sample records used by the demo + tests
+│       ├── sample_data.py        #   synthetic sample records used by the demo + tests
+│       └── synthetic_data.py     #   labeled validation corpus generator (600 records, seeded)
 ├── api/                          # zero-dependency HTTP JSON layer (stdlib http.server)
 │   ├── __init__.py
 │   └── server.py                 #   GET /health · GET /demo · POST /reconcile
@@ -71,10 +72,12 @@ notification-assurance-agent/
 │   ├── scenarios/                # synthetic worked examples (MAS gap investigation + monitoring notes)
 │   └── sample_reports/           # synthetic statement-period report the monitoring dashboard renders
 ├── scripts/
-│   └── run_demo.py               # zero-install entry point (runs the console demo)
+│   ├── run_demo.py               # zero-install entry point (runs the console demo)
+│   └── validate_agent.py         # scores the agent on the labeled corpus (precision/recall)
 ├── tests/
 │   ├── __init__.py
-│   └── test_reconciliation.py    # deterministic tests for the core + grounded agent
+│   ├── test_reconciliation.py    # deterministic tests for the core + grounded agent
+│   └── test_validation_corpus.py # regression test wrapping the validation harness
 ├── docs/
 │   ├── ARCHITECTURE.md           # design → code mapping
 │   └── CODE_NOTES.md             # module-level notes
@@ -126,7 +129,8 @@ curl -X POST http://127.0.0.1:8000/reconcile \
 **Run the tests:**
 
 ```bash
-python3 tests/test_reconciliation.py     # no dependencies
+python3 tests/test_reconciliation.py       # no dependencies
+python3 tests/test_validation_corpus.py    # scores the agent on the labeled corpus
 # or, if you have pytest:  pytest tests/
 ```
 
@@ -140,6 +144,28 @@ raw-field reconciliation on the same synthetic records. The agent removes false
 positives (suppressed accounts, throttled sends) and surfaces high-severity
 failures the stamp-only source system cannot see (bounces, silent stamp-update
 losses). See `SAMPLE_OUTPUT.txt` for a full run.
+
+**Labeled validation corpus.** For a quantitative check, `synthetic_data.py`
+generates a seeded, labeled corpus of 600 synthetic records (200 per process) —
+each paired with the outcome the agent *should* reach. Its population *shape*
+(category mix, missed rate, per-failure-mode rates) is modeled on anonymized
+aggregate ratios only; no real record, id, or field value is used. The harness
+runs the agent over the whole corpus and scores it against ground truth on two
+dimensions — *missed detection* (eligible-vs-stamped) and *gap detection*
+(bounces, silent stamp losses):
+
+```bash
+python3 scripts/validate_agent.py
+```
+
+Current result — perfect precision and recall on both dimensions, zero false
+positives (45/45 missed, 10/10 gaps across 600 records):
+
+```
+OVERALL
+  missed detection : tp=45 fp=0 fn=0  precision=1.000 recall=1.000
+  gap detection    : tp=10 fp=0 fn=0  precision=1.000 recall=1.000
+```
 
 **Known limitation:** on the small synthetic corpus, retrieval similarity scores
 are low, so most classifications conservatively route to human review. A larger,
