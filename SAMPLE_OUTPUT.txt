@@ -4,9 +4,9 @@ Detector (eligible vs stamped) + observability-gap closer
 ########################################################################
 
 ========================================================================
-MAS  Monthly Statement  |  period=2024-10
+MAS  Monthly Statement  |  period=2026-10
 ========================================================================
-  REASON: run MAS assurance for 2024-10
+  REASON: run MAS assurance for 2026-10
   ACT reconcile -> eligible=3 stamped=2 missed=1
   ACT detect_gaps -> 1 observability gap(s)
       retrieve('eligible not stamped missed', MAS) -> runbook_mas.md#eligible_not_stamped score=0.342
@@ -22,9 +22,9 @@ MAS  Monthly Statement  |  period=2024-10
   -> missed=2  escalations=2
 
 ========================================================================
-MCN  Multiplier Notice  |  period=2024-10
+MCN  Multiplier Notice  |  period=2026-10
 ========================================================================
-  REASON: run MCN assurance for 2024-10
+  REASON: run MCN assurance for 2026-10
   ACT reconcile -> eligible=3 stamped=2 missed=1
   ACT detect_gaps -> 0 observability gap(s)
       retrieve('eligible not stamped missed', MCN) -> runbook_mcn.md#eligible_not_stamped score=0.375
@@ -37,9 +37,9 @@ MCN  Multiplier Notice  |  period=2024-10
   -> missed=1  escalations=1
 
 ========================================================================
-THRESHOLD  Usage  |  period=2024-10-05
+THRESHOLD  Usage  |  period=2026-10-05
 ========================================================================
-  REASON: run THRESHOLD assurance for 2024-10-05
+  REASON: run THRESHOLD assurance for 2026-10-05
   ACT reconcile -> eligible=3 stamped=1 missed=2
   ACT detect_gaps -> 1 observability gap(s)
       retrieve('threshold_silent_failure', THRESHOLD) -> reason_code_glossary.md#threshold_silent_failure score=0.331

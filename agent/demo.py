@@ -22,25 +22,25 @@ from model import MAS, MCN, THRESHOLD, Record
 
 def build_records() -> list[Record]:
     return [
-        # --- MAS (monthly statement), cycle month 2024-10 -------------------
-        Record("C001", subscribed_statement=True, last_statement_notified="2024-10-03",
+        # --- MAS (monthly statement), cycle month 2026-10 -------------------
+        Record("C001", subscribed_statement=True, last_statement_notified="2026-10-03",
                 _actually_delivered=True),                      # sent + delivered OK
         Record("C002", subscribed_statement=True, last_statement_notified=None,
                 _actually_delivered=None),                      # eligible, NOT stamped -> missed
         Record("C003", subscribed_statement=True, suppressed_types=[MAS],
                 last_statement_notified=None),                  # suppressed -> expected non-send
-        Record("C004", subscribed_statement=True, last_statement_notified="2024-10-02",
+        Record("C004", subscribed_statement=True, last_statement_notified="2026-10-02",
                 _actually_delivered=False),                     # stamped but BOUNCED (hidden gap)
 
-        # --- MCN (multiplier), cycle window start 2024-10-01 ----------------
+        # --- MCN (multiplier), cycle window start 2026-10-01 ----------------
         Record("M001", subscribed_multiplier=True, multiplier_effective_soon=True,
-                last_multiplier_notified="2024-10-04", _actually_delivered=True),
+                last_multiplier_notified="2026-10-04", _actually_delivered=True),
         Record("M002", subscribed_multiplier=True, multiplier_effective_soon=True,
                 last_multiplier_notified=None, _actually_delivered=None),  # missed
         Record("M003", subscribed_multiplier=True, multiplier_effective_soon=True,
-                last_multiplier_notified="2024-08-15"),         # within throttle prior window
+                last_multiplier_notified="2026-08-15"),         # within throttle prior window
 
-        # --- THRESHOLD (daily), 2024-10-05 ----------------------------------
+        # --- THRESHOLD (daily), 2026-10-05 ----------------------------------
         Record("T001", subscribed_thresholds=[80, 90, 100], usage_percentage=92,
                 thresholds_notified=[80, 90], _actually_delivered=True),   # already sent 90
         Record("T002", subscribed_thresholds=[80, 90, 100], usage_percentage=85,
@@ -76,9 +76,9 @@ def main() -> None:
     print("Detector (eligible vs stamped) + observability-gap closer")
     print("#" * 72)
 
-    run_process(agent, MAS, "2024-10", "2024-10-01", records, "MAS  Monthly Statement")
-    run_process(agent, MCN, "2024-10", "2024-10-01", records, "MCN  Multiplier Notice")
-    run_process(agent, THRESHOLD, "2024-10-05", "2024-10-05", records, "THRESHOLD  Usage")
+    run_process(agent, MAS, "2026-10", "2026-10-01", records, "MAS  Monthly Statement")
+    run_process(agent, MCN, "2026-10", "2026-10-01", records, "MCN  Multiplier Notice")
+    run_process(agent, THRESHOLD, "2026-10-05", "2026-10-05", records, "THRESHOLD  Usage")
 
     print("\n" + "#" * 72)
     print("WHY THE GROUNDED AGENT BEATS A PROMPT-ONLY / RAW-FIELD RECONCILIATION")
