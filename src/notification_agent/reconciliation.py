@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from model import MAS, MCN, THRESHOLD, Record
+from .model import MAS, MCN, THRESHOLD, Record
 
 
 # Anonymized config mirroring the real constants.

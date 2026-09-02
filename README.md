@@ -53,31 +53,63 @@ human-in-the-loop wrap the loop.
 
 ```
 notification-assurance-agent/
-├── src/                      # core agent logic (importable modules)
-│   ├── agent.py              #   ReAct-style orchestration tying the halves together
-│   ├── model.py              #   synthetic records + proof-of-send stamp fields
-│   ├── reconciliation.py     #   deterministic per-process eligible-vs-stamped logic (no RAG)
-│   ├── gaps.py               #   observability-gap detection via a simulated delivery probe
-│   └── retrieval.py          #   dependency-free semantic retrieval (top-k, threshold, metadata filter)
-├── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
+├── src/
+│   └── notification_agent/       # the installable Python package
+│       ├── __init__.py           #   public API surface (exports the agent + helpers)
+│       ├── __main__.py           #   console demo — `python3 -m notification_agent`
+│       ├── agent.py              #   ReAct-style orchestration tying the halves together
+│       ├── model.py              #   synthetic records + proof-of-send stamp fields
+│       ├── reconciliation.py     #   deterministic per-process eligible-vs-stamped logic (no RAG)
+│       ├── gaps.py               #   observability-gap detection via a simulated delivery probe
+│       ├── retrieval.py          #   dependency-free semantic retrieval (top-k, threshold, metadata filter)
+│       └── sample_data.py        #   synthetic sample records used by the demo + tests
+├── api/                          # zero-dependency HTTP JSON layer (stdlib http.server)
+│   ├── __init__.py
+│   └── server.py                 #   GET /health · GET /demo · POST /reconcile
+├── data/
+│   └── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
 ├── scripts/
-│   └── run_demo.py           # runs all three processes + the "why grounding matters" contrast
+│   └── run_demo.py               # zero-install entry point (runs the console demo)
 ├── tests/
-│   └── test_reconciliation.py# deterministic tests for the core + grounded agent
+│   ├── __init__.py
+│   └── test_reconciliation.py    # deterministic tests for the core + grounded agent
 ├── docs/
-│   ├── ARCHITECTURE.md        # design → code mapping
-│   └── CODE_NOTES.md          # module-level notes
-├── SAMPLE_OUTPUT.txt          # captured demo output (sample evaluation artifact)
+│   ├── ARCHITECTURE.md           # design → code mapping
+│   └── CODE_NOTES.md             # module-level notes
+├── pyproject.toml                # packaging metadata (`pip install -e .`), no runtime deps
+├── SAMPLE_OUTPUT.txt             # captured demo output (sample evaluation artifact)
 └── README.md
 ```
 
 ## Run it
 
+**The demo (zero install):**
+
 ```bash
 python3 scripts/run_demo.py
 ```
 
-Run the tests:
+**As an installed package** (optional — enables `python3 -m notification_agent`
+and the `notification-agent-demo` command):
+
+```bash
+pip install -e .
+python3 -m notification_agent
+```
+
+**As a JSON API** (still zero third-party dependencies — pure stdlib):
+
+```bash
+python3 api/server.py            # serves on http://127.0.0.1:8000
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/demo  # runs all three processes on the sample data
+# POST your own synthetic records:
+curl -X POST http://127.0.0.1:8000/reconcile \
+  -d '{"notification_type":"MAS","period":"2026-10","cycle_start":"2026-10-01",
+       "records":[{"record_id":"Z1","subscribed_statement":true}]}'
+```
+
+**Run the tests:**
 
 ```bash
 python3 tests/test_reconciliation.py     # no dependencies
@@ -85,7 +117,7 @@ python3 tests/test_reconciliation.py     # no dependencies
 ```
 
 No third-party dependencies — pure Python standard library, so it runs anywhere
-with Python 3.10+.
+with Python 3.9+.
 
 ## Evaluation
 

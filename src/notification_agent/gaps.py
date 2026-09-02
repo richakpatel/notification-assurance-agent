@@ -25,8 +25,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from model import STAMP_FIELD, THRESHOLD, Record
-from reconciliation import ReconciliationResult, _highest_crossed_tier
+from .model import STAMP_FIELD, THRESHOLD, Record
+from .reconciliation import ReconciliationResult, _highest_crossed_tier
 
 
 @dataclass

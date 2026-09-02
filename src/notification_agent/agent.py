@@ -20,10 +20,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from gaps import ObservabilityGap, detect_gaps
-from model import Record
-from reconciliation import ReconciliationResult, reconcile
-from retrieval import KnowledgeBase, SIMILARITY_THRESHOLD, build_default_kb
+from .gaps import ObservabilityGap, detect_gaps
+from .model import Record
+from .reconciliation import ReconciliationResult, reconcile
+from .retrieval import KnowledgeBase, SIMILARITY_THRESHOLD, build_default_kb
 
 
 @dataclass

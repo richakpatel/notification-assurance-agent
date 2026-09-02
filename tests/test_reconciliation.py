@@ -13,9 +13,8 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
-from agent import NotificationAssuranceAgent
-from model import MAS, MCN, THRESHOLD, Record
-from reconciliation import reconcile
+from notification_agent import MAS, MCN, THRESHOLD, NotificationAssuranceAgent, Record
+from notification_agent.reconciliation import reconcile
 
 
 def _mas_records():
