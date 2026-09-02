@@ -6,50 +6,104 @@ Detector (eligible vs stamped) + observability-gap closer
 ========================================================================
 MAS  Monthly Statement  |  period=2026-10
 ========================================================================
+  PLAN: Reconciler -> Classifier -> Root-Cause Investigator -> Reporter  (shared-state pipeline)
   REASON: run MAS assurance for 2026-10
-  ACT reconcile -> eligible=3 stamped=2 missed=1
-  ACT detect_gaps -> 1 observability gap(s)
+  [Reconciler] eligible=3 stamped=2 missed=1
+  [Classifier] detect_gaps -> 1 observability gap(s)
       retrieve('eligible not stamped missed', MAS) -> runbook_mas.md#eligible_not_stamped score=0.342
         grounded -> reason=eligible_not_stamped category=needs_review missed=True escalate=True
       retrieve('stamped_but_bounced', MAS) -> reason_code_glossary.md#stamped_but_bounced score=0.232
         grounded -> reason=stamped_but_bounced category=needs_review missed=True escalate=True
-  REASON: missed=2 escalations=2
+  [Investigator] ambiguous tail -> 2 finding(s) for ToT root-cause
+      ToT root-cause: symptom='eligible_not_stamped' record=C002 (BFS, b=4, T=3)
+        d1 propose categories -> delivery_failure=1.00, genuine_miss=1.00, data_integrity=1.00, expected_non_send=0.00
+        d1 beam (top 4) -> delivery_failure, genuine_miss, data_integrity, expected_non_send
+        d2 delivery_failure/stamped_but_bounced -> plausible value=1.00 (delivery unverified; provider probe inconclusive)
+        d2 delivery_failure/threshold_silent_failure -> refuted [pruned] (no silent stamp-update loss detected)
+        d2 genuine_miss/genuine_send_failure -> plausible value=1.00 (no proof-of-send stamp and delivery unverified)
+        d2 data_integrity/integrity_mismatch -> plausible value=1.00 (independent signals disagree; data-quality review)
+        d2 expected_non_send/suppressed -> refuted [pruned] (no suppression flag for this type)
+        d2 expected_non_send/throttle_window -> refuted [pruned] (no recent stamp inside the throttle window)
+        d2 expected_non_send/threshold_reset -> refuted [pruned] (no evidence of a tier reset)
+        d3 decide -> near-tie stamped_but_bounced vs genuine_send_failure -> human review
+      ToT root-cause: symptom='stamped_but_bounced' record=C004 (BFS, b=4, T=3)
+        d1 propose categories -> delivery_failure=20.00, data_integrity=1.00, expected_non_send=0.00, genuine_miss=0.00
+        d1 beam (top 4) -> delivery_failure, data_integrity, expected_non_send, genuine_miss
+        d2 delivery_failure/stamped_but_bounced -> confirmed value=20.00 (external probe shows bounce/non-delivery on a stamped record)
+        d2 delivery_failure/threshold_silent_failure -> refuted [pruned] (no silent stamp-update loss detected)
+        d2 data_integrity/integrity_mismatch -> plausible value=1.00 (independent signals disagree; data-quality review)
+        d2 expected_non_send/suppressed -> refuted [pruned] (no suppression flag for this type)
+        d2 expected_non_send/throttle_window -> refuted [pruned] (no recent stamp inside the throttle window)
+        d2 expected_non_send/threshold_reset -> refuted [pruned] (no evidence of a tier reset)
+        d2 genuine_miss/genuine_send_failure -> refuted [pruned] (record IS stamped -- not an unstamped genuine miss)
+        d3 decide -> CONFIRMED 'stamped_but_bounced' conf=1.00 (escalate=True); external probe shows bounce/non-delivery on a stamped record
+  [Reporter] missed=2 escalations=2 root-causes-confirmed=1/2
 
   Findings:
     C002   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=high   conf=0.342
+           ToT root cause -> stamped_but_bounced [plausible] conf=0.05 (human review)
     C004   observed=stamped_but_bounced        reason=stamped_but_bounced    missed=True  escalate=True  sev=high   conf=0.232
+           ToT root cause -> stamped_but_bounced [confirmed] conf=1.00 (human review)
 
   -> missed=2  escalations=2
 
 ========================================================================
 MCN  Multiplier Notice  |  period=2026-10
 ========================================================================
+  PLAN: Reconciler -> Classifier -> Root-Cause Investigator -> Reporter  (shared-state pipeline)
   REASON: run MCN assurance for 2026-10
-  ACT reconcile -> eligible=3 stamped=2 missed=1
-  ACT detect_gaps -> 0 observability gap(s)
+  [Reconciler] eligible=3 stamped=2 missed=1
+  [Classifier] detect_gaps -> 0 observability gap(s)
       retrieve('eligible not stamped missed', MCN) -> runbook_mcn.md#eligible_not_stamped score=0.375
         grounded -> reason=eligible_not_stamped category=needs_review missed=True escalate=True
-  REASON: missed=1 escalations=1
+  [Investigator] ambiguous tail -> 1 finding(s) for ToT root-cause
+      ToT root-cause: symptom='eligible_not_stamped' record=M002 (BFS, b=4, T=3)
+        d1 propose categories -> delivery_failure=1.00, genuine_miss=1.00, data_integrity=1.00, expected_non_send=0.00
+        d1 beam (top 4) -> delivery_failure, genuine_miss, data_integrity, expected_non_send
+        d2 delivery_failure/stamped_but_bounced -> plausible value=1.00 (delivery unverified; provider probe inconclusive)
+        d2 delivery_failure/threshold_silent_failure -> refuted [pruned] (no silent stamp-update loss detected)
+        d2 genuine_miss/genuine_send_failure -> plausible value=1.00 (no proof-of-send stamp and delivery unverified)
+        d2 data_integrity/integrity_mismatch -> plausible value=1.00 (independent signals disagree; data-quality review)
+        d2 expected_non_send/suppressed -> refuted [pruned] (no suppression flag for this type)
+        d2 expected_non_send/throttle_window -> refuted [pruned] (no recent stamp inside the throttle window)
+        d2 expected_non_send/threshold_reset -> refuted [pruned] (no evidence of a tier reset)
+        d3 decide -> near-tie stamped_but_bounced vs genuine_send_failure -> human review
+  [Reporter] missed=1 escalations=1 root-causes-confirmed=0/1
 
   Findings:
     M002   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=high   conf=0.375
+           ToT root cause -> stamped_but_bounced [plausible] conf=0.05 (human review)
 
   -> missed=1  escalations=1
 
 ========================================================================
 THRESHOLD  Usage  |  period=2026-10-05
 ========================================================================
+  PLAN: Reconciler -> Classifier -> Root-Cause Investigator -> Reporter  (shared-state pipeline)
   REASON: run THRESHOLD assurance for 2026-10-05
-  ACT reconcile -> eligible=3 stamped=1 missed=2
-  ACT detect_gaps -> 1 observability gap(s)
+  [Reconciler] eligible=3 stamped=1 missed=2
+  [Classifier] detect_gaps -> 1 observability gap(s)
       retrieve('threshold_silent_failure', THRESHOLD) -> reason_code_glossary.md#threshold_silent_failure score=0.331
         grounded -> reason=threshold_silent_failure category=needs_review missed=True escalate=True
       retrieve('eligible not stamped missed', THRESHOLD) -> reason_code_glossary.md#eligible_not_stamped score=0.219
         grounded -> reason=eligible_not_stamped category=real_failure missed=True escalate=True
-  REASON: missed=2 escalations=2
+  [Investigator] ambiguous tail -> 1 finding(s) for ToT root-cause
+      ToT root-cause: symptom='threshold_silent_failure' record=T002 (BFS, b=4, T=3)
+        d1 propose categories -> delivery_failure=20.00, data_integrity=1.00, expected_non_send=0.00, genuine_miss=0.00
+        d1 beam (top 4) -> delivery_failure, data_integrity, expected_non_send, genuine_miss
+        d2 delivery_failure/stamped_but_bounced -> refuted [pruned] (external probe confirms delivery)
+        d2 delivery_failure/threshold_silent_failure -> confirmed value=20.00 (delivered but crossed tier missing from the stamp list (update failure is only debug-logged))
+        d2 data_integrity/integrity_mismatch -> plausible value=1.00 (independent signals disagree; data-quality review)
+        d2 expected_non_send/suppressed -> refuted [pruned] (no suppression flag for this type)
+        d2 expected_non_send/throttle_window -> refuted [pruned] (no recent stamp inside the throttle window)
+        d2 expected_non_send/threshold_reset -> refuted [pruned] (no evidence of a tier reset)
+        d2 genuine_miss/genuine_send_failure -> refuted [pruned] (provider shows a delivery -- not a genuine send failure)
+        d3 decide -> CONFIRMED 'threshold_silent_failure' conf=1.00 (escalate=True); delivered but crossed tier missing from the stamp list (update failure is only debug-logged)
+  [Reporter] missed=2 escalations=2 root-causes-confirmed=1/1
 
   Findings:
     T002   observed=threshold_silent_failure   reason=threshold_silent_failure missed=True  escalate=True  sev=high   conf=0.331
+           ToT root cause -> threshold_silent_failure [confirmed] conf=1.00 (human review)
     T003   observed=eligible_not_stamped       reason=eligible_not_stamped   missed=True  escalate=True  sev=medium conf=0.219
 
   -> missed=2  escalations=2

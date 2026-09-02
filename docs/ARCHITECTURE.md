@@ -8,12 +8,21 @@ idea to where it lives. All data is synthetic / anonymized.
 Exact work is deterministic; judgment work is grounded by retrieval.
 
 ```
-Reconcile (eligible vs stamped) → Detect observability gaps → Classify (RAG) → Route
-      deterministic core              external delivery probe      grounded         escalate/report
-                        └────────── ReAct loop, trajectory logged ──────────┘
+Reconciler ───▶ Classifier ───▶ Investigator ───▶ Reporter
+(eligible vs     (detect gaps +    (Tree-of-Thought   (synthesize
+ stamped,         RAG grounding,     root-cause on      the report)
+ deterministic)   human-review       the ambiguous
+                  fallback)          tail)
+                       ▲__________________│
+                     advisory feedback edge
+       └────────── shared state, one trajectory logged ──────────┘
 ```
 
-All core modules live in the `notification_agent` package under `src/`.
+The four agents (Checkpoint 5.1) run as a directed pipeline over one shared
+`CycleState`. Inside it, the deterministic reconciliation core and the RAG
+classifier are unchanged from 3.1; the Investigator adds a Tree-of-Thought
+root-cause search (4.1) on the ambiguous tail. All core modules live in the
+`notification_agent` package under `src/`.
 
 | Concept | Where it lives | Notes |
 |---|---|---|
@@ -22,7 +31,9 @@ All core modules live in the `notification_agent` package under `src/`.
 | Observability-gap detection | `src/notification_agent/gaps.py` | Simulated external delivery probe surfaces `stamped_but_bounced` and `threshold_silent_failure` — failures the source system cannot see because the stamp is the only proof-of-send. |
 | RAG classification | `src/notification_agent/retrieval.py` + `src/notification_agent/agent.py` (`_classify`) | TF cosine retrieval over `data/knowledge_base/`, top-k with a similarity threshold and metadata pre-filter by notification type. |
 | Confidence → human review | `src/notification_agent/agent.py` (`SIMILARITY_THRESHOLD` fallback) | Below threshold, the finding degrades to `needs_review` instead of forcing a match. |
-| ReAct orchestration | `src/notification_agent/agent.py` (`run_cycle`) | Reason → Act (reconcile) → Observe → Act (detect gaps) → Reason (classify) → Route, with a full trajectory trace. |
+| Tree-of-Thought root cause | `src/notification_agent/tot.py` (`investigate`) | BFS beam search (b≈4, T=3) over `[symptom, evidence, candidate-cause]`; value = confirmed/plausible/refuted (sampled ×3); confirmed gated on deterministic corroboration; near-ties → human review. Runs only on the ambiguous tail (Checkpoint 4.1). |
+| Four-agent pipeline | `src/notification_agent/pipeline.py` (`AssurancePipeline`, `CycleState`) | Reconciler → Classifier → Investigator → Reporter over shared state, with one advisory feedback edge (Investigator → Classifier). LangGraph-style directed topology (Checkpoint 5.1). |
+| Orchestration entry point | `src/notification_agent/agent.py` (`run_cycle`) | Builds and runs the pipeline; keeps `_classify` (the ReAct-style Reason→Act→Observe classification from 2.1) that the Classifier agent calls. Emits one unified trajectory. |
 | Synthetic sample data | `src/notification_agent/sample_data.py` (`build_records`) | The teaching-case records shared by the demo, the tests, and the API's `/demo` route. |
 | Labeled validation corpus | `src/notification_agent/synthetic_data.py` (`generate` → `generate_synthetic_corpus`) | Seeded, labeled 600-record corpus (200/process); each record paired with the ground-truth outcome. Population shape from anonymized aggregate ratios only. |
 | Console demo | `src/notification_agent/__main__.py` | Runs all three processes + the contrast test; invoked by `scripts/run_demo.py`, `python3 -m notification_agent`, or the `notification-agent-demo` command. |
@@ -47,6 +58,47 @@ related objects; one flat record keeps the demo readable. A hidden
 `_actually_delivered` flag exists **only** so the demo can show the
 stamped-but-bounced gap — the agent reads it solely through the simulated probe in
 `gaps.py`, never directly.
+
+## Tree-of-Thought root-cause search (`tot.py`)
+
+Reconciliation names *which* records were missed. The Investigator answers *why*,
+running a faithful ToT-BFS search (Yao et al. 2023, Algorithm 1) per ambiguous
+finding:
+
+- **State / node** = `[symptom, evidence-so-far, candidate cause]`.
+- **Depth 1 (propose)** — branch the symptom into candidate cause *categories*
+  (`expected_non_send`, `delivery_failure`, `genuine_miss`, `data_integrity`);
+  score each by look-ahead and keep the top-`b` (beam width ≈ 4).
+- **Depth 2 (corroborate)** — expand surviving categories into specific reason
+  codes (the glossary vocabulary), evaluate each, and **prune refuted branches**.
+- **Depth 3 (decide)** — a cause is `confirmed` only with deterministic
+  corroboration and a clear margin; a near-tie or a merely-`plausible` best cause
+  routes to **human review**.
+- **Value** = `confirmed / plausible / refuted`, weighted 20 / 1 / 0.001 and
+  sampled ×3 (the paper's sampled evaluator).
+
+**Honest note on the "reasoning":** this repo is zero-dependency and calls **no
+LLM**. The thought *generator* and *evaluator* are deterministic heuristics over
+the record's evidence signals — honest stand-ins for what would be model calls in
+production. What is implemented in full is the ToT *control structure* (branching,
+per-level value evaluation, beam pruning, depth bound, decision rule); an LLM
+generator/evaluator would slot in without changing the search. This mirrors the
+deterministic mock backend the reference capstones ship alongside their model
+backend.
+
+## Four-agent coordination (`pipeline.py`)
+
+The pipeline runs `Reconciler → Classifier → Investigator → Reporter` over one
+shared `CycleState` (a blackboard). Communication is mostly one-way along the
+edges; the single two-way edge is **Investigator → Classifier**: when the ToT
+search confirms a cause that would reframe a finding (e.g. an ambiguous miss is
+really an expected non-send), the Investigator posts an *advisory* message. In the
+safe default configuration that message is logged and surfaced, but the
+**deterministic reconciliation counts stay authoritative** — the agent never
+silently downgrades a miss on its own reasoning; a human confirms. This keeps the
+"counts must never hallucinate" rule (3.1) and the human-in-the-loop backstop
+(6.1) intact, and is why adding the Investigator does not change the validation
+metrics below.
 
 ## Evaluation
 

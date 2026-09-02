@@ -22,8 +22,11 @@ is a missed notification, and a stamped-but-bounced email is invisible internall
 - `reconciliation.py` — deterministic eligible-vs-stamped logic per process (no RAG).
 - `gaps.py` — observability-gap detection via a simulated external delivery probe.
 - `retrieval.py` — dependency-free semantic retrieval (top-k, threshold, metadata filter).
-- `agent.py` — ReAct-style orchestration tying the halves together.
+- `tot.py` — Tree-of-Thought root-cause engine (BFS beam search; Checkpoint 4.1).
+- `pipeline.py` — four-agent coordination pipeline over shared state (Checkpoint 5.1).
+- `agent.py` — public `NotificationAssuranceAgent`; `run_cycle` runs the pipeline.
 - `sample_data.py` — synthetic sample records shared by the demo, tests, and API.
+- `synthetic_data.py` — labeled 600-record validation corpus generator.
 - `__main__.py` — runs all three processes and the "why grounding matters" contrast.
 
 Outside the package:

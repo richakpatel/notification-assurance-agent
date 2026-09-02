@@ -39,6 +39,11 @@ def run_process(agent, nt, period, start, records, label):
               f"reason={f.reason_code:<22} missed={str(f.counts_as_missed):<5} "
               f"escalate={str(f.escalate):<5} sev={f.severity:<6} "
               f"conf={f.confidence:.3f}")
+        if f.root_cause is not None:
+            rc = f.root_cause
+            print(f"           ToT root cause -> {rc.cause} [{rc.verdict}] "
+                  f"conf={rc.confidence:.2f}"
+                  + (" (human review)" if rc.escalate_to_human else ""))
     print(f"\n  -> missed={report.missed_count}  escalations={len(report.escalations)}")
     return report
 

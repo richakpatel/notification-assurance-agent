@@ -1,18 +1,19 @@
 """
 Customer Notification Assurance Agent -- hybrid orchestration.
 
-Ties together the two halves of the design:
-  1. Deterministic reconciliation (reconciliation.py) -- eligible-this-cycle vs.
-     stamped-this-cycle, exact set logic, no RAG.
-  2. RAG-grounded classification (retrieval.py) -- grounds WHY a record is a gap and
-     what to do, over anonymized runbooks/glossary.
-  3. Observability-gap detection (gaps.py) -- surfaces failures the source system
-     cannot see (stamped-but-bounced, threshold silent failure), using an external
-     delivery probe as the grounding source the org lacks internally.
+Ties together the halves of the design as a four-agent pipeline (Checkpoint 5.1):
+  1. Reconciler   (reconciliation.py) -- eligible-this-cycle vs. stamped-this-cycle,
+     exact set logic, no RAG.
+  2. Classifier   (retrieval.py + gaps.py) -- detects observability gaps and RAG-
+     grounds WHY each record is a gap, over anonymized runbooks/glossary.
+  3. Investigator (tot.py) -- Tree-of-Thought root-cause search on the ambiguous
+     tail (Checkpoint 4.1).
+  4. Reporter     (pipeline.py) -- synthesizes the final CycleReport.
 
-Flow mirrors the ReAct loop from Checkpoint 2.1:
-  Reason -> Act (reconcile) -> Observe -> Act (detect gaps) -> Observe ->
-  Reason (classify each finding from grounded context) -> Act (route).
+`NotificationAssuranceAgent.run_cycle` builds and runs that pipeline. It still
+exposes `_classify` (the RAG-grounded classification of one finding), which the
+Classifier agent calls -- keeping the ReAct-style reasoning and trajectory log
+from Checkpoint 2.1 intact while the pipeline structure matches 4.1 / 5.1.
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .gaps import ObservabilityGap, detect_gaps
 from .model import Record
-from .reconciliation import ReconciliationResult, reconcile
+from .reconciliation import ReconciliationResult
 from .retrieval import KnowledgeBase, SIMILARITY_THRESHOLD, build_default_kb
+from .tot import RootCause
 
 
 @dataclass
@@ -38,6 +39,7 @@ class Finding:
     severity: str            # high | medium | low
     confidence: float
     grounded_by: str | None
+    root_cause: RootCause | None = None   # set by the Investigator on the ambiguous tail
 
 
 @dataclass
@@ -98,44 +100,11 @@ class NotificationAssuranceAgent:
 
     def run_cycle(self, notification_type: str, period: str, cycle_start: str,
                   records: list[Record]) -> CycleReport:
-        trace: list[str] = []
-        trace.append(f"REASON: run {notification_type} assurance for {period}")
+        """Run the four-agent assurance pipeline for one cycle.
 
-        # Act: deterministic reconciliation (eligible vs. stamped).
-        result = reconcile(notification_type, period, cycle_start, records)
-        trace.append(
-            f"ACT reconcile -> eligible={result.eligible_count} "
-            f"stamped={result.delivered_count} missed={result.missed_count}")
-
-        # Act: observability-gap detection via external delivery probe.
-        obs_gaps = detect_gaps(result, records, cycle_start)
-        trace.append(f"ACT detect_gaps -> {len(obs_gaps)} observability gap(s)")
-
-        findings: list[Finding] = []
-
-        # Classify each missed (eligible-not-stamped) record, grounded by RAG.
-        gap_kinds = {g.record_id: g for g in obs_gaps}
-        for rid in result.missed_ids:
-            # If an observability gap explains this miss, use its kind as the hint.
-            if rid in gap_kinds:
-                g = gap_kinds[rid]
-                findings.append(self._classify(
-                    notification_type, rid, g.kind, g.kind, trace))
-            else:
-                findings.append(self._classify(
-                    notification_type, rid, "eligible_not_stamped",
-                    "eligible not stamped missed", trace))
-
-        # Classify high-severity stamped-but-bounced gaps (not in missed set).
-        for g in obs_gaps:
-            if g.kind == "stamped_but_bounced":
-                findings.append(self._classify(
-                    notification_type, g.record_id, g.kind, g.kind, trace))
-
-        # Suppressed / expected non-sends among eligible records aren't missed;
-        # the reconciliation already excludes them from eligible, so nothing to do.
-
-        missed = sum(1 for f in findings if f.counts_as_missed)
-        escalations = [f for f in findings if f.escalate]
-        trace.append(f"REASON: missed={missed} escalations={len(escalations)}")
-        return CycleReport(result, findings, missed, escalations, trace)
+        Reconciler -> Classifier -> Investigator (ToT) -> Reporter, over shared
+        state. The deterministic reconciliation counts remain authoritative; the
+        Investigator only *adds* a root cause to the ambiguous tail."""
+        from .pipeline import AssurancePipeline   # local import avoids a cycle
+        return AssurancePipeline(self._classify).run(
+            notification_type, period, cycle_start, records)

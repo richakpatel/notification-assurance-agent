@@ -31,18 +31,34 @@ Per notification cycle it runs an end-to-end assurance pass:
 3. **Classify** — a semantic retrieval layer (RAG) grounds *why* each gap
    happened against anonymized runbooks + a reason-code glossary, and degrades to
    human review when confidence is low.
-4. **Route** — produces a prioritized, evidence-backed exception list; low-
+4. **Investigate** — a Tree-of-Thought root-cause search runs on the *ambiguous
+   tail* (the findings that routed to review), proposing candidate causes,
+   pruning refuted ones, and confirming a cause only with corroborating evidence.
+5. **Route** — produces a prioritized, evidence-backed exception list; low-
    confidence and high-impact findings escalate to a human.
 
-A ReAct-style loop ties these together and logs a full trajectory.
+Four agents (Reconciler → Classifier → Investigator → Reporter) coordinate over
+shared state and log one full trajectory.
 
 ## Architecture
 
 ```
-Reconcile (eligible vs stamped) → Detect observability gaps → Classify (RAG) → Route
-      deterministic core              external delivery probe      grounded         escalate/report
-                        └────────── ReAct loop, trajectory logged ──────────┘
+Reconciler ───▶ Classifier ───▶ Investigator ───▶ Reporter
+(eligible vs     (detect gaps +    (Tree-of-Thought   (synthesize
+ stamped,         RAG grounding,     root-cause on      the report)
+ deterministic)   review fallback)   the ambiguous tail)
+                       ▲__________________│
+                     advisory feedback edge
+       └────────── shared state, one trajectory logged ──────────┘
 ```
+
+**Tree-of-Thought & no-LLM note.** The Investigator implements the ToT-BFS search
+structure from Yao et al. 2023 (branch → evaluate → beam-prune → decide, with
+near-ties routed to human review). To stay zero-dependency it calls **no LLM**:
+the thought generator and evaluator are deterministic heuristics over each
+record's evidence — honest stand-ins a model would slot into without changing the
+search. The deterministic reconciliation counts always stay authoritative, so the
+Investigator is *additive* and never inflates or hides a miss.
 
 The core design idea is a **hybrid split**: exact work (counting) is
 deterministic because counts must never hallucinate; judgment work (*why* a
@@ -57,7 +73,9 @@ notification-assurance-agent/
 │   └── notification_agent/       # the installable Python package
 │       ├── __init__.py           #   public API surface (exports the agent + helpers)
 │       ├── __main__.py           #   console demo — `python3 -m notification_agent`
-│       ├── agent.py              #   ReAct-style orchestration tying the halves together
+│       ├── agent.py              #   public agent; run_cycle builds + runs the pipeline
+│       ├── pipeline.py           #   four-agent coordination over shared state (Checkpoint 5.1)
+│       ├── tot.py                #   Tree-of-Thought root-cause engine, BFS beam search (Checkpoint 4.1)
 │       ├── model.py              #   synthetic records + proof-of-send stamp fields
 │       ├── reconciliation.py     #   deterministic per-process eligible-vs-stamped logic (no RAG)
 │       ├── gaps.py               #   observability-gap detection via a simulated delivery probe
@@ -77,7 +95,8 @@ notification-assurance-agent/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_reconciliation.py    # deterministic tests for the core + grounded agent
-│   └── test_validation_corpus.py # regression test wrapping the validation harness
+│   ├── test_validation_corpus.py # regression test wrapping the validation harness
+│   └── test_tot.py               # Tree-of-Thought search + pipeline (additivity) tests
 ├── docs/
 │   ├── ARCHITECTURE.md           # design → code mapping
 │   └── CODE_NOTES.md             # module-level notes
@@ -131,6 +150,7 @@ curl -X POST http://127.0.0.1:8000/reconcile \
 ```bash
 python3 tests/test_reconciliation.py       # no dependencies
 python3 tests/test_validation_corpus.py    # scores the agent on the labeled corpus
+python3 tests/test_tot.py                   # Tree-of-Thought search + pipeline additivity
 # or, if you have pytest:  pytest tests/
 ```
 

@@ -5,7 +5,8 @@ A hybrid reconciliation-and-diagnosis agent for entitlement operations:
   * deterministic reconciliation core   (reconciliation.py)
   * observability-gap detector          (gaps.py)
   * RAG-grounded classifier             (retrieval.py + agent.py)
-  * ReAct-style orchestration           (agent.py)
+  * Tree-of-Thought root-cause search   (tot.py)
+  * four-agent coordination pipeline    (pipeline.py)
 
 All data in this package is SYNTHETIC / ANONYMIZED. No proprietary field names
 or real records appear anywhere.
@@ -22,6 +23,8 @@ from .reconciliation import ReconciliationResult, reconcile
 from .gaps import ObservabilityGap, detect_gaps
 from .retrieval import KnowledgeBase, SIMILARITY_THRESHOLD, build_default_kb
 from .agent import CycleReport, Finding, NotificationAssuranceAgent
+from .tot import RootCause, investigate
+from .pipeline import AssurancePipeline, CycleState
 from .sample_data import build_records
 from .synthetic_data import LabeledRecord, generate as generate_synthetic_corpus
 
@@ -48,6 +51,12 @@ __all__ = [
     "NotificationAssuranceAgent",
     "CycleReport",
     "Finding",
+    # tree-of-thought root cause
+    "RootCause",
+    "investigate",
+    # four-agent pipeline
+    "AssurancePipeline",
+    "CycleState",
     # sample data
     "build_records",
     # synthetic validation corpus

@@ -134,6 +134,16 @@ def _render_index_html(cycles: dict) -> str:
                 f"<td style='text-align:right'>{f['confidence']:.3f}</td>"
                 f"</tr>"
             )
+            rc = f.get("root_cause")
+            if rc:
+                review = " &middot; human review" if rc.get("escalate_to_human") else ""
+                rows.append(
+                    f"<tr class='rc'><td></td>"
+                    f"<td colspan='7'>&#8627; ToT root cause: "
+                    f"<b>{_esc(rc['cause'])}</b> "
+                    f"<span class='verdict'>[{_esc(rc['verdict'])}]</span> "
+                    f"conf={rc['confidence']:.2f}{review}</td></tr>"
+                )
         sections.append(f"""
       <section class="cycle">
         <h2>{_esc(name)} <span class="period">period {_esc(report['period'])}</span></h2>
@@ -180,6 +190,8 @@ def _render_index_html(cycles: dict) -> str:
   th {{ background:#f0f2f8; color:var(--band); font-weight:600; }}
   .mono {{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }}
   .pill {{ color:#fff; padding:2px 9px; border-radius:10px; font-size:11px; font-weight:600; }}
+  tr.rc td {{ background:#f7f9ff; color:#33447a; font-size:12px; border-bottom:1px solid #eee; }}
+  tr.rc .verdict {{ color:#2B59C3; font-weight:600; }}
   .endpoints {{ font-size:13px; color:#555; }}
   .endpoints code {{ background:#eef; padding:2px 6px; border-radius:4px; }}
   footer {{ text-align:center; color:#999; font-size:12px; padding:20px; }}
