@@ -49,23 +49,39 @@ deterministic because counts must never hallucinate; judgment work (*why* a
 record was missed) is grounded by retrieval. Guardrails, read-only tools, and
 human-in-the-loop wrap the loop.
 
-## Files
+## Repository layout
 
-| File | Role |
-|---|---|
-| `agent/model.py` | Synthetic records + proof-of-send stamp fields |
-| `agent/reconciliation.py` | Deterministic per-process eligible-vs-stamped logic (no RAG) |
-| `agent/gaps.py` | Observability-gap detection via a simulated delivery probe |
-| `agent/retrieval.py` | Dependency-free semantic retrieval (top-k, threshold, metadata filter) |
-| `agent/agent.py` | ReAct-style orchestration tying the halves together |
-| `agent/demo.py` | Runs all three processes + the "why grounding matters" contrast |
-| `agent/knowledge_base/` | Anonymized runbooks + reason-code glossary the RAG layer indexes |
-| `SAMPLE_OUTPUT.txt` | Captured demo output (sample evaluation artifact) |
+```
+notification-assurance-agent/
+├── src/                      # core agent logic (importable modules)
+│   ├── agent.py              #   ReAct-style orchestration tying the halves together
+│   ├── model.py              #   synthetic records + proof-of-send stamp fields
+│   ├── reconciliation.py     #   deterministic per-process eligible-vs-stamped logic (no RAG)
+│   ├── gaps.py               #   observability-gap detection via a simulated delivery probe
+│   └── retrieval.py          #   dependency-free semantic retrieval (top-k, threshold, metadata filter)
+├── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
+├── scripts/
+│   └── run_demo.py           # runs all three processes + the "why grounding matters" contrast
+├── tests/
+│   └── test_reconciliation.py# deterministic tests for the core + grounded agent
+├── docs/
+│   ├── ARCHITECTURE.md        # design → code mapping
+│   └── CODE_NOTES.md          # module-level notes
+├── SAMPLE_OUTPUT.txt          # captured demo output (sample evaluation artifact)
+└── README.md
+```
 
 ## Run it
 
 ```bash
-python3 agent/demo.py
+python3 scripts/run_demo.py
+```
+
+Run the tests:
+
+```bash
+python3 tests/test_reconciliation.py     # no dependencies
+# or, if you have pytest:  pytest tests/
 ```
 
 No third-party dependencies — pure Python standard library, so it runs anywhere

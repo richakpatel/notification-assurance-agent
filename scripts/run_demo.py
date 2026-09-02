@@ -12,9 +12,17 @@ with the RAG-grounded agent (suppression, throttle, reset excluded; bounces and
 silent failures escalated correctly).
 
 ALL DATA IS SYNTHETIC / QA ONLY.
+
+Entry point: run from the repo root with  python3 scripts/run_demo.py
 """
 
 from __future__ import annotations
+
+import pathlib
+import sys
+
+# Make the src/ modules importable when run as a script from anywhere.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from agent import NotificationAssuranceAgent
 from model import MAS, MCN, THRESHOLD, Record

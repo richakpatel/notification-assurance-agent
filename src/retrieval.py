@@ -143,6 +143,7 @@ def _extract_field(text: str, field_name: str) -> str | None:
 
 
 def build_default_kb() -> KnowledgeBase:
+    # knowledge_base/ lives at the repo root (one level above src/).
     kb = KnowledgeBase()
-    kb.load_directory(Path(__file__).parent / "knowledge_base")
+    kb.load_directory(Path(__file__).resolve().parent.parent / "knowledge_base")
     return kb
