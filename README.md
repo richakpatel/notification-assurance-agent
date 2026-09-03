@@ -87,7 +87,7 @@ notification-assurance-agent/
 │   └── server.py                 #   GET /health · GET /demo · POST /reconcile
 ├── data/
 │   ├── knowledge_base/           # anonymized runbooks + reason-code glossary the RAG layer indexes
-│   ├── scenarios/                # synthetic worked examples (MAS gap investigation + monitoring notes)
+│   ├── scenarios/                # synthetic worked examples (MAS, MCN, threshold gap investigations + monitoring notes)
 │   └── sample_reports/           # synthetic statement-period report the monitoring dashboard renders
 ├── scripts/
 │   ├── run_demo.py               # zero-install entry point (runs the console demo)
