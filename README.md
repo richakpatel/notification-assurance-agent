@@ -42,14 +42,22 @@ shared state and log one full trajectory.
 
 ## Architecture
 
-```
-Reconciler ───▶ Classifier ───▶ Investigator ───▶ Reporter
-(eligible vs     (detect gaps +    (Tree-of-Thought   (synthesize
- stamped,         RAG grounding,     root-cause on      the report)
- deterministic)   review fallback)   the ambiguous tail)
-                       ▲__________________│
-                     advisory feedback edge
-       └────────── shared state, one trajectory logged ──────────┘
+```mermaid
+flowchart LR
+    R["<b>Reconciler</b><br/>eligible vs stamped<br/><i>deterministic — no RAG</i>"]
+    C["<b>Classifier</b><br/>detect gaps + RAG grounding<br/><i>human-review fallback</i>"]
+    I["<b>Investigator</b><br/>Tree-of-Thought root-cause<br/><i>on the ambiguous tail</i>"]
+    P["<b>Reporter</b><br/>synthesize the<br/>prioritized report"]
+
+    R --> C --> I --> P
+    I -.->|advisory feedback| C
+
+    subgraph shared["shared state · one full trajectory logged end-to-end"]
+        R
+        C
+        I
+        P
+    end
 ```
 
 **Tree-of-Thought & no-LLM note.** The Investigator implements the ToT-BFS search
